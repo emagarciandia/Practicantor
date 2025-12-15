@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Vocal Trainer - Checkpoint Alpha</title>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background: #000; color: #0f0; margin: 0; overflow: hidden; user-select: none; }
+        #panel-superior { background: #111; padding: 10px 20px; border-bottom: 2px solid #222; display: flex; justify-content: space-between; align-items: center; z-index: 100; position: relative; gap: 15px; }
+        .grupo { display: flex; align-items: center; gap: 8px; }
+        
+        /* ESTILO GENERAL BOTONES */
+        .btn-inst { background: #1a1a1a; color: #888; border: 1px solid #333; padding: 6px 10px; border-radius: 4px; cursor: pointer; font-size: 0.7em; font-weight: bold; transition: 0.2s; text-transform: uppercase; }
+        .btn-inst.active { border-color: #0f0; color: #0f0; background: #040; box-shadow: 0 0 8px rgba(0,255,0,0.2); }
+        
+        /* ESTILO LISTA DESPLEGABLE (SELECT) */
+        .select-tono {
+            background: #1a1a1a;
+            color: #0f0;
+            border: 1px solid #0f0;
+            padding: 8px 12px;
+            border-radius: 4px;
+            font-size: 0.8em;
+            font-weight: bold;
+            cursor: pointer;
+            outline: none;
+            text-transform: uppercase;
+        }
+        .select-tono option { background: #111; color: #0f0; }
+
+        .btn-icon { background: #222; color: #0f0; border: 1px solid #0f0; width: 40px; height: 40px; font-size: 1.2em; cursor: pointer; border-radius: 6px; display: flex; align-items: center; justify-content: center; transition: 0.2s; }
+        .btn-icon:hover { background: #0f0; color: #000; }
+        .btn-icon:disabled { border-color: #444; color: #444; background: #151515; cursor: default; }
+        
+        .btn-rec-active { background: #f00 !important; color: #fff !important; animation: pulse 1s infinite; border-color: #fff !important; }
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
+        
+        /* MONITORES */
+        #vu-container { width: 10px; height: 40px; background: #111; border-radius: 2px; overflow: hidden; position: relative; border: 1px solid #333; }
+        #vu-bar { width: 100%; position: absolute; bottom: 0; transition: height 0.05s ease; background: #0f0; }
+        .monitor { text-align: center; background: #1a1a1a; padding: 4px 10px; border-radius: 6px; border: 1px solid #333; min-width: 70px; }
+        .label { font-size: 8px; color: #666; text-transform: uppercase; margin-bottom: 2px; }
+        .valor { font-family: 'Courier New', monospace; font-size: 1.2em; font-weight: bold; }
+        #tiempo-display { font-family: 'Courier New', monospace; font-size: 12px; color: #888; min-width: 80px; text-align: center; }
+
+        input[type=range] { -webkit-appearance: none; width: 70px; height: 3px; background: #333; border-radius: 2px; outline: none; }
+        input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 10px; height: 10px; background: #0f0; border-radius: 50%; cursor: pointer; }
+
+        /* LIENZO */
+        #contenedor-progreso { width: 100%; height: 6px; background: #222; cursor: pointer; position: relative; z-index: 101; }
+        #barra-progreso { height: 100%; background: #0f0; width: 0%; pointer-events: none; }
+        canvas#canvasMidi { display: block; cursor: grab; background: #080808; }
+        canvas#canvasMidi:active { cursor: grabbing; }
+    </style>
+</head>
+<body>
+
+<div id="panel-superior">
+    <div class="grupo">
+        <button id="btn-mic" class="btn-icon">🎤</button>
+        <div id="vu-container"><div id="vu-bar" style="height: 0%"></div></div>
+        <button id="btn-load" class="btn-icon" disabled>📂</button>
+        <input type="file" id="input-midi" style="display:none" accept=".mid,.midi">
+    </div>
+    
+    <div class="grupo">
+        <button class="btn-inst active" data-inst="sine">〰️</button>
+        <button class="btn-inst" data-inst="piano">🎹</button>
+        <div class="vol-wrapper" style="display:flex; flex-direction:column; align-items:center;">
+            <div class="label">VOL</div>
+            <input type="range" id="vol-slider" min="-60" max="0" value="-10" step="1">
+        </div>
+    </div>
+    
+    <div class="grupo">
+        <div class="label" style="margin-right: 5px;">TONO:</div>
+        <select id="select-tono" class="select-tono">
+            <option value="0">Hombre 1 (Base)</option>
+            <option value="4">Hombre 2 (+4 st)</option>
+            <option value="9">Mujer 1 (+9 st)</option>
+            <option value="12">Mujer 2 (+12 st)</option>
+        </select>
+    </div>
+    
+    <div class="grupo">
+        <button id="btn-play-pause" class="btn-icon" disabled>▶</button>
+        <button id="btn-stop" class="btn-icon" disabled>⏹</button>
+        <button id="btn-rec" class="btn-icon" disabled>🔴</button>
+        <button id="btn-report" class="btn-icon" disabled>📊</button>
+    </div>
+    
+    <div class="grupo">
+        <div class="monitor"><div class="label">SCORE</div><div id="score-display" class="valor">0.0</div></div>
+        <div class="monitor"><div class="label">NOTA</div><div id="val-nota" class="valor">--</div></div>
+        <div id="tiempo-display">0:00</div>
+    </div>
+</div>
+
+<div id="contenedor-progreso"><div id="barra-progreso"></div></div>
+<canvas id="canvasMidi"></canvas>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@tonejs/midi"></script>
+
+<script>
+const LATENCIA_VISUAL = 0.20; 
+const ZOOM_X = 140; 
+let TRANSPOSE = 0;
+const NOTA_MIN = 36;
+const NOTA_MAX = 84;
+const ANCHO_TECLADO = 60;
+const NOMBRES = ["C","C#","D","D#","E","F","F#","G","G#","A","A#","B"];
+
+let hitFrames = 0, activeFrames = 0;
+let noteHistory = []; 
+let offsetManual = 0, isDragging = false, startDragX = 0, startOffset = 0;
+let isRecording = false, recordedChunks = [];
+let audioCtx, analyser, micData, midiData = null, durationMIDI = 0;
+let currentSynth, recorder, pitchBuffer = [];
+
+const canvas = document.getElementById('canvasMidi'), ctx = canvas.getContext('2d');
+const progBar = document.getElementById('barra-progreso');
+const scoreDisp = document.getElementById('score-display');
+const vuBar = document.getElementById('vu-bar');
+const btnPP = document.getElementById('btn-play-pause');
+const btnRec = document.getElementById('btn-rec');
+const selectTono = document.getElementById('select-tono');
+
+const recordingDest = Tone.getContext().createMediaStreamDestination();
+const mainVol = new Tone.Volume(-10).toDestination();
+mainVol.connect(recordingDest);
+
+function initInstruments() {
+    const instruments = {
+        sine: new Tone.PolySynth(Tone.Synth, { oscillator: { type: "sine" }, envelope: { attack: 0.05, release: 1 } }).connect(mainVol),
+        piano: new Tone.Sampler({
+            urls: { "C4": "C4.mp3", "D#4": "Ds4.mp3", "F#4": "Fs4.mp3" },
+            release: 1, baseUrl: "https://tonejs.github.io/audio/salamander/"
+        }).connect(mainVol)
+    };
+    currentSynth = instruments.sine;
+    document.querySelectorAll('.btn-inst').forEach(btn => {
+        btn.onclick = () => {
+            document.querySelectorAll('.btn-inst').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            if(currentSynth) currentSynth.releaseAll();
+            currentSynth = instruments[btn.dataset.inst];
+        };
+    });
+}
+
+document.getElementById('vol-slider').oninput = (e) => mainVol.volume.value = e.target.value;
+
+// Manejo del cambio de tono mediante SELECT
+selectTono.onchange = (e) => {
+    TRANSPOSE = parseInt(e.target.value);
+    if (Tone.Transport.state === "started" && midiData) scheduleMidi();
+};
+
+canvas.onmousedown = (e) => {
+    if (Tone.Transport.state !== "started") {
+        isDragging = true; startDragX = e.clientX; startOffset = offsetManual;
+        canvas.style.cursor = 'grabbing';
+    }
+};
+window.onmousemove = (e) => {
+    if (isDragging) offsetManual = Math.max(0, startOffset - ((e.clientX - startDragX) / ZOOM_X));
+};
+window.onmouseup = () => {
+    if(isDragging) {
+        isDragging = false; canvas.style.cursor = 'grab';
+        if(Tone.Transport.state !== "started") Tone.Transport.seconds = offsetManual;
+    }
+};
+
+function getPitchMPM(buffer, sr) {
+    const n = buffer.length;
+    let ns = new Float32Array(n);
+    for (let tau = 0; tau < n/2; tau++) {
+        let sum = 0;
+        for (let i = 0; i < n/2; i++) sum += buffer[i] * buffer[i + tau];
+        ns[tau] = sum;
+    }
+    let maxVal = ns[0];
+    let peaks = [];
+    for (let i = 1; i < n/2 - 1; i++) {
+        if (ns[i] > ns[i-1] && ns[i] > ns[i+1]) {
+            if (ns[i] > maxVal * 0.85) peaks.push({i: i, val: ns[i]});
+        }
+    }
+    if (peaks.length > 0) return sr / peaks[0].i;
+    return -1;
+}
+
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight - 100;
+
+function render() {
+    ctx.fillStyle = '#080808'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+    if (Tone.Transport.state === "started") offsetManual = Tone.Transport.seconds;
+    
+    const audioTime = offsetManual;
+    const visualTime = audioTime - LATENCIA_VISUAL; 
+    const hNota = canvas.height / (NOTA_MAX - NOTA_MIN);
+    const receptorX = 250;
+
+    if (durationMIDI > 0) {
+        progBar.style.width = Math.min(100, (audioTime / durationMIDI) * 100) + "%";
+        document.getElementById('tiempo-display').innerText = Math.floor(audioTime/60) + ":" + String(Math.floor(audioTime%60)).padStart(2, '0');
+    }
+
+    for(let i = 0; i <= (NOTA_MAX - NOTA_MIN); i++) {
+        let midi = i + NOTA_MIN;
+        let y = canvas.height - (i * hNota) - hNota;
+        let isBlack = [1,3,6,8,10].includes(midi % 12);
+        ctx.fillStyle = isBlack ? '#111' : '#1a1a1a';
+        ctx.fillRect(0, y, canvas.width, hNota);
+        ctx.strokeStyle = '#222'; ctx.strokeRect(0, y, ANCHO_TECLADO, hNota);
+        ctx.fillStyle = isBlack ? '#555' : '#bbb';
+        if (midi % 12 === 0) ctx.fillStyle = '#0f0';
+        ctx.font = 'bold 10px Arial';
+        ctx.fillText(NOMBRES[midi%12] + Math.floor(midi/12 - 1), 10, y + hNota/1.5);
+    }
+
+    if (midiData) {
+        midiData.tracks.forEach(track => track.notes.forEach(n => {
+            let x = (n.time - visualTime) * ZOOM_X + receptorX;
+            let y = canvas.height - ((n.midi + TRANSPOSE - NOTA_MIN + 1) * hNota);
+            if (x + (n.duration * ZOOM_X) > ANCHO_TECLADO && x < canvas.width) {
+                ctx.fillStyle = (n.time <= visualTime && n.time + n.duration >= visualTime) ? '#ff0' : 'rgba(0, 255, 0, 0.2)';
+                ctx.fillRect(Math.max(ANCHO_TECLADO, x), y+1, n.duration * ZOOM_X, hNota-2);
+            }
+        }));
+    }
+
+    if (analyser) {
+        analyser.getFloatTimeDomainData(micData);
+        let rms = Math.sqrt(micData.reduce((a, b) => a + b*b, 0) / micData.length);
+        vuBar.style.height = Math.min(100, rms * 1000) + "%";
+
+        if (rms > 0.02) {
+            let freq = getPitchMPM(micData, audioCtx.sampleRate);
+            if (freq > 50 && freq < 1200) {
+                let pitch = 12 * Math.log2(freq / 440) + 69;
+                pitchBuffer.push(pitch);
+                if (pitchBuffer.length > 5) pitchBuffer.shift();
+                let smoothPitch = [...pitchBuffer].sort((a,b)=>a-b)[Math.floor(pitchBuffer.length/2)];
+                let yVoz = canvas.height - ((smoothPitch - NOTA_MIN) * hNota) - hNota/2;
+                let isHit = false, targetMidi = -1;
+                midiData?.tracks.forEach(tr => tr.notes.forEach(n => {
+                    if(visualTime >= n.time && visualTime <= n.time + n.duration) targetMidi = n.midi + TRANSPOSE;
+                }));
+                if (Tone.Transport.state === "started" && targetMidi !== -1) {
+                    activeFrames++; if (Math.abs(smoothPitch - targetMidi) < 0.7) { hitFrames++; isHit = true; }
+                }
+                ctx.fillStyle = isHit ? '#0f0' : '#fff';
+                ctx.beginPath(); ctx.arc(receptorX, yVoz, 5, 0, Math.PI*2); ctx.fill();
+                document.getElementById('val-nota').innerText = NOMBRES[Math.round(smoothPitch)%12];
+                if (Tone.Transport.state === "started") noteHistory.push({y: yVoz, t: visualTime, isHit: isHit});
+            } else { if (Tone.Transport.state === "started") noteHistory.push({gap: true}); }
+        } else { if (Tone.Transport.state === "started") noteHistory.push({gap: true}); }
+    }
+
+    if (activeFrames > 0) scoreDisp.innerText = ((hitFrames / activeFrames) * 10).toFixed(1);
+
+    ctx.lineWidth = 3;
+    for(let i = 1; i < noteHistory.length; i++){
+        let p = noteHistory[i], prev = noteHistory[i-1];
+        if (p.gap || prev.gap) continue;
+        let curX = receptorX - (visualTime - p.t) * ZOOM_X;
+        let prevX = receptorX - (visualTime - prev.t) * ZOOM_X;
+        if (curX < ANCHO_TECLADO) continue;
+        ctx.beginPath(); ctx.strokeStyle = p.isHit ? '#0f0' : '#f44';
+        ctx.moveTo(prevX, prev.y); ctx.lineTo(curX, p.y); ctx.stroke();
+    }
+    
+    if (Tone.Transport.state === "started" && audioTime >= durationMIDI) stopAll();
+    requestAnimationFrame(render);
+}
+
+function scheduleMidi() {
+    Tone.Transport.cancel();
+    midiData.tracks.forEach(track => track.notes.forEach(n => {
+        if (n.time >= Tone.Transport.seconds) {
+            Tone.Transport.schedule((time) => {
+                currentSynth.triggerAttackRelease(Tone.Frequency(n.midi + TRANSPOSE, "midi").toNote(), n.duration, time);
+            }, n.time);
+        }
+    }));
+}
+
+function stopAll() {
+    if (isRecording) { recorder.stop(); isRecording = false; }
+    btnRec.classList.remove('btn-rec-active');
+    Tone.Transport.stop();
+    if(currentSynth) currentSynth.releaseAll();
+    btnPP.innerText = "▶";
+    noteHistory.push({gap: true});
+}
+
+btnPP.onclick = () => {
+    if (Tone.Transport.state === "started") {
+        Tone.Transport.pause(); btnPP.innerText = "▶"; noteHistory.push({gap: true});
+    } else {
+        if (Math.abs(Tone.Transport.seconds) < 0.1) {
+            noteHistory = []; hitFrames = 0; activeFrames = 0; scoreDisp.innerText = "0.0";
+        }
+        scheduleMidi(); Tone.Transport.start(); btnPP.innerText = "⏸";
+    }
+};
+
+document.getElementById('btn-stop').onclick = () => { stopAll(); Tone.Transport.seconds = 0; offsetManual = 0; };
+
+btnRec.onclick = () => {
+    if (!isRecording) {
+        noteHistory = []; hitFrames = 0; activeFrames = 0; Tone.Transport.seconds = 0;
+        recordedChunks = []; recorder.start(); isRecording = true;
+        btnRec.classList.add('btn-rec-active');
+        scheduleMidi(); Tone.Transport.start(); btnPP.innerText = "⏸";
+    } else { stopAll(); }
+};
+
+document.getElementById('btn-mic').onclick = async () => {
+    await Tone.start(); initInstruments();
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: true } });
+    audioCtx = Tone.getContext().rawContext;
+    const micSource = audioCtx.createMediaStreamSource(stream);
+    micSource.connect(audioCtx.createGain()).connect(recordingDest);
+    analyser = audioCtx.createAnalyser(); analyser.fftSize = 2048;
+    micSource.connect(analyser); micData = new Float32Array(2048);
+    recorder = new MediaRecorder(recordingDest.stream);
+    recorder.ondataavailable = (e) => recordedChunks.push(e.data);
+    recorder.onstop = () => {
+        const blob = new Blob(recordedChunks, { type: 'audio/webm' });
+        const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'vocal_session.webm'; a.click();
+    };
+    document.getElementById('btn-mic').style.background = "#040"; 
+    document.getElementById('btn-load').disabled = false;
+    btnRec.disabled = false;
+    document.getElementById('btn-report').disabled = false;
+    render();
+};
+
+document.getElementById('btn-load').onclick = () => document.getElementById('input-midi').click();
+document.getElementById('input-midi').onchange = async (e) => {
+    midiData = new Midi(await e.target.files[0].arrayBuffer());
+    durationMIDI = 0;
+    midiData.tracks.forEach(t => t.notes.forEach(n => { if(n.time + n.duration > durationMIDI) durationMIDI = n.time + n.duration; }));
+    btnPP.disabled = false; document.getElementById('btn-stop').disabled = false;
+};
+
+document.getElementById('btn-report').onclick = () => {
+    if (!midiData) return;
+    const rCanvas = document.createElement('canvas');
+    const rCtx = rCanvas.getContext('2d');
+    const rWidth = Math.max(1200, durationMIDI * ZOOM_X + 200);
+    const rHeight = 800;
+    rCanvas.width = rWidth; rCanvas.height = rHeight;
+    const hN = rHeight / (NOTA_MAX - NOTA_MIN);
+    rCtx.fillStyle = '#080808'; rCtx.fillRect(0, 0, rWidth, rHeight);
+    midiData.tracks.forEach(track => track.notes.forEach(n => {
+        rCtx.fillStyle = 'rgba(0, 255, 0, 0.2)';
+        let x = n.time * ZOOM_X + 100;
+        let y = rHeight - ((n.midi + TRANSPOSE - NOTA_MIN + 1) * hN);
+        rCtx.fillRect(x, y + 1, n.duration * ZOOM_X, hN - 2);
+    }));
+    rCtx.lineWidth = 3;
+    for (let i = 1; i < noteHistory.length; i++) {
+        let p = noteHistory[i], prev = noteHistory[i - 1];
+        if (p.gap || prev.gap) continue;
+        let x1 = prev.t * ZOOM_X + 100;
+        let x2 = p.t * ZOOM_X + 100;
+        let scaleY = rHeight / canvas.height;
+        rCtx.beginPath(); rCtx.strokeStyle = p.isHit ? '#0f0' : '#f44';
+        rCtx.moveTo(x1, prev.y * scaleY); rCtx.lineTo(x2, p.y * scaleY); rCtx.stroke();
+    }
+    const link = document.createElement('a');
+    link.download = 'vocal_report_' + new Date().getTime() + '.png';
+    link.href = rCanvas.toDataURL(); link.click();
+};
+</script>
+</body>
+</html>
