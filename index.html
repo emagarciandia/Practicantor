@@ -147,11 +147,13 @@
             border-right: 1px solid #333;
             z-index: 999;
             transition: 0.3s;
-            padding: 80px 20px 20px 20px;
+            padding: 80px 20px 150px 20px;
+            /* Increased bottom padding for better scroll */
             display: flex;
             flex-direction: column;
             gap: 20px;
             overflow-y: auto;
+            overscroll-behavior: contain;
         }
 
         #panel-controles.open {
@@ -460,10 +462,13 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 8px 12px;
+            padding: 15px;
+            /* Más padding para tocar mejor */
             background: rgba(0, 50, 0, 0.5);
             cursor: move;
             user-select: none;
+            touch-action: none;
+            /* FIX: Evita scroll al arrastrar */
         }
 
         #spectrometer-header span {
@@ -496,7 +501,8 @@
 
         #spectrometer-canvas {
             width: 100%;
-            height: calc(100% - 40px);
+            height: calc(100% - 50px);
+            /* Ajustado por header más alto */
             display: block;
         }
 
@@ -582,11 +588,14 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 8px 12px;
+            padding: 15px;
+            /* Más padding */
             background: rgba(0, 50, 0, 0.5);
             cursor: move;
             user-select: none;
             flex-shrink: 0;
+            touch-action: none;
+            /* FIX: Evita scroll al arrastrar */
         }
 
         #video-header span {
