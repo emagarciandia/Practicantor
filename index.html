@@ -87,6 +87,10 @@
             letter-spacing: 4px;
         }
 
+        #splash-screen h1 {
+            font-size: 2.85em;
+        }
+
         :root {
             --neon: #bf00ff;
             /* Violeta Neón Principal */
@@ -187,6 +191,9 @@
             left: 50%;
             transform: translateX(-50%);
             display: flex;
+            flex-wrap: wrap;
+            /* Permite wrap */
+            justify-content: center;
             gap: 12px;
             z-index: 1100;
             background: rgba(0, 0, 0, 0.8);
@@ -194,6 +201,7 @@
             border-radius: 20px;
             border: 1px solid #333;
             backdrop-filter: blur(10px);
+            max-width: 90%;
         }
 
         .btn-nav {
@@ -209,6 +217,7 @@
             align-items: center;
             justify-content: center;
             transition: 0.2s;
+            flex-shrink: 0;
         }
 
         .btn-nav.rec-active {
@@ -227,22 +236,29 @@
             top: 15px;
             right: 15px;
             display: flex;
+            flex-wrap: wrap;
+            justify-content: flex-end;
             gap: 8px;
             z-index: 900;
+            max-width: 80%;
         }
 
         .mini-monitor {
             background: rgba(20, 20, 20, 0.8);
             border: 1px solid #333;
-            padding: 8px 10px;
+            padding: 7px 9px;
             border-radius: 10px;
             text-align: center;
-            min-width: 55px;
+            min-width: 50px;
+        }
+
+        .mini-monitor .label {
+            font-size: 10px;
         }
 
         .valor {
             font-family: monospace;
-            font-size: 1.1em;
+            font-size: 1em;
             font-weight: bold;
         }
 
@@ -324,6 +340,12 @@
             display: block;
             background: #050505;
             cursor: grab;
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
         }
 
         @keyframes pulse {
@@ -605,6 +627,38 @@
             height: 100%;
             border: none;
         }
+
+        /* Ajustes para pantallas muy pequeñas */
+        @media (max-width: 600px) {
+            #barra-acciones {
+                bottom: 50px;
+                padding: 8px;
+                gap: 8px;
+                width: 90%;
+            }
+
+            .btn-nav {
+                width: 40px;
+                height: 40px;
+                font-size: 1.1em;
+            }
+
+            #hud-top {
+                top: 10px;
+                right: 10px;
+                gap: 4px;
+            }
+
+            .mini-monitor {
+                padding: 4px 6px;
+                min-width: 45px;
+                font-size: 0.9em;
+            }
+
+            h1 {
+                font-size: 2em;
+            }
+        }
     </style>
 </head>
 
@@ -781,7 +835,11 @@
 
     <script>
         // --- CONFIGURACIÓN ---
-        const WHATSAPP_LINK = "https://wa.me/5491134404342"; // <--- CONFIGURA TU LINK DE WHATSAPP AQUI
+        const WHATSAPP_LINK = "https://wa.me/5491134404342";
+        // Configuración de Supabase
+        const SUPABASE_URL = "https://ihxvvhlarcsojcdmaqxu.supabase.co";
+        const SUPABASE_KEY = "sb_publishable__Axzn8jLhtKObi97La_GBA_MRATpgtv"; // IMPORTANTE: Usar la 'anon' public key si es posible
+
         const LATENCIA_VISUAL = 0.25, ZOOM_X = 140, ANCHO_TECLADO = 60;
         const NOTA_MIN = 36, NOTA_MAX = 84, NOMBRES = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
 
@@ -799,6 +857,14 @@
 
         const canvas = document.getElementById('canvasMidi'), ctx = canvas.getContext('2d');
         const scoreDisp = document.getElementById('score-display'), progBar = document.getElementById('barra-progreso');
+
+        // Función para ajustar tamaño del canvas
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas(); // Llamada inicial
 
         // --- INICIALIZACIÓN ---
 
@@ -844,6 +910,7 @@
             setupDraggable(document.getElementById('video-popup'), document.getElementById('video-header'));
         };
 
+        // Función para guardar registro en Supabase
         function saveUserLog(userName) {
             try {
                 const logEntry = {
@@ -853,13 +920,51 @@
                     timestamp: Date.now()
                 };
 
+                // 1. Guardar Localmente siempre (backup)
                 let logs = JSON.parse(localStorage.getItem('practicantor_logs') || '[]');
                 if (!Array.isArray(logs)) logs = [];
                 logs.push(logEntry);
                 localStorage.setItem('practicantor_logs', JSON.stringify(logs));
-                console.log("Registro guardado:", logEntry);
+                console.log("Local log saved:", logEntry);
+
+                // 2. Enviar a Supabase
+                if (SUPABASE_URL && SUPABASE_KEY) {
+                    // Asumimos que la tabla se llama 'registros'
+                    const TABLE_NAME = "registros";
+                    const endpoint = `${SUPABASE_URL}/rest/v1/${TABLE_NAME}`;
+
+                    // Datos a enviar (ajustar nombres de columnas según tu tabla en Supabase)
+                    const dataToSend = {
+                        nombre: logEntry.name,
+                        fecha: new Date().toISOString() // Supabase prefiere ISO strings o dates
+                    };
+
+                    fetch(endpoint, {
+                        method: 'POST',
+                        headers: {
+                            'apikey': SUPABASE_KEY,
+                            'Authorization': `Bearer ${SUPABASE_KEY}`,
+                            'Content-Type': 'application/json',
+                            'Prefer': 'return=minimal'
+                        },
+                        body: JSON.stringify(dataToSend),
+                    })
+                        .then(async response => {
+                            if (response.ok) {
+                                console.log("✅ Registro guardado en Supabase!");
+                            } else {
+                                const errText = await response.text();
+                                console.warn("⚠️ Error Supabase:", response.status, errText);
+                                console.log("Asegúrate de haber creado la tabla 'registros' con columnas 'nombre' (text) y 'fecha' (timestamp/text) y tener las Policies habilitadas.");
+                            }
+                        })
+                        .catch(err => {
+                            console.error("❌ Error de conexión con Supabase:", err);
+                        });
+                }
+
             } catch (e) {
-                console.error("Error guardando el registro:", e);
+                console.error("Error general guardando el registro:", e);
             }
         }
 
