@@ -346,6 +346,8 @@
             width: 100%;
             height: 100%;
             z-index: 0;
+            touch-action: none;
+            /* Crucial para evitar scroll al arrastrar en movil */
         }
 
         @keyframes pulse {
@@ -789,7 +791,7 @@
                 </div>
 
                 <!-- Categoria 5 -->
-                <div class="accordion-category" onclick="toggleCategory(this)">5. Tracto Vocal <span>▼</span></div>
+                <div class="accordion-category" onclick="toggleCategory(this)">5. T.V.S.O <span>▼</span></div>
                 <div class="accordion-content">
                     <!-- <div class="song-item" onclick="loadSong('ejercicios/TractoVocal/ejercicio.mid', this)">Ejemplo</div> -->
                 </div>
@@ -813,14 +815,22 @@
                 <option value="12">Mujer 2</option>
             </select>
         </div>
-        <div class="grupo" style="margin-top: 20px;">
+        <div class="grupo" style="margin-top: 30px; position: relative;">
+            <div
+                style="position: absolute; top: -38px; left: 0; width: 100%; color: var(--neon); font-family: 'Brush Script MT', 'Comic Sans MS', cursive; font-size: 1.1em; transform: rotate(-3deg); text-align: center; pointer-events: none; text-shadow: 0 0 5px rgba(0,0,0,0.8);">
+                Contacto y Sugerencias <br>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round" style="transform: rotate(15deg); margin-top: -8px;">
+                    <path d="M12 5v14M19 12l-7 7-7-7" />
+                </svg>
+            </div>
             <button id="btn-whatsapp" class="btn-action"
                 style="background: transparent; border-color: #25D366; color: #25D366; width: 100%; display: flex; align-items: center; justify-content: center; gap: 10px; font-size: 1em; padding: 10px;">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
                     <path
                         d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z" />
                 </svg>
-                Contactar
+                WhatsApp
             </button>
         </div>
     </aside>
@@ -847,7 +857,7 @@
         document.getElementById('btn-whatsapp').onclick = () => {
             window.open(WHATSAPP_LINK, '_blank');
         };
-        let TRANSPOSE = 0, hitFrames = 0, activeFrames = 0, noteHistory = [], beatGrid = [];
+        let TRANSPOSE = 0, hitFrames = 0, activeFrames = 0, noteHistory = [], beatGrid = [], idleVisualHistory = [];
         let offsetManual = 0, isDragging = false, startDragX = 0, startOffset = 0;
         let audioCtx, analyser, micData, midiData = null, durationMIDI = 0;
         let currentSynth, recorder, recordedChunks = [], isRecording = false, pitchBuffer = [];
@@ -1386,6 +1396,60 @@
                 } else {
                     currentDetectedFreq = 0; // Reset si no hay detección válida
                 }
+
+                // --- NUEVO: Efecto "Osciloscopio" cuando está en Stop/Pause ---
+                if (Tone.Transport.state !== "started") {
+                    const now = Date.now();
+                    // Si hay detección válida, agregar al historial visual
+                    if (currentDetectedFreq > 50 && currentDetectedFreq < 1200) {
+                        let pitch = 12 * Math.log2(currentDetectedFreq / 440) + 69;
+                        let yVoz = canvas.height - ((pitch - NOTA_MIN) * hNota) - hNota / 2;
+                        // Usar RMS para grosor si está disponible, sino default
+                        let vThick = Math.max(1, Math.min(10, rms * 40));
+                        idleVisualHistory.push({ y: yVoz, time: now, vol: vThick });
+                    } else {
+                        // Agregar punto "nulo" o simplemente no agregar para cortes?
+                        // Mejor no agregar nada para que se vea cortado si no canta
+                    }
+
+                    // Dibujar historial visual desplazándose a la izquierda
+                    // Puntos nuevos aparecen en receptorX
+                    // Velocidad: ZOOM_X pixels por segundo
+
+                    ctx.lineCap = 'round';
+                    ctx.lineJoin = 'round';
+
+                    // Limpieza de puntos antiguos
+                    const maxAge = (receptorX + 100) / ZOOM_X * 1000; // ms que tarda en salir por la izquierda
+                    while (idleVisualHistory.length > 0 && (now - idleVisualHistory[0].time) > maxAge) {
+                        idleVisualHistory.shift();
+                    }
+
+                    if (idleVisualHistory.length > 1) {
+                        for (let i = 1; i < idleVisualHistory.length; i++) {
+                            let p = idleVisualHistory[i];
+                            let prev = idleVisualHistory[i - 1];
+
+                            // Calcular X relativo al tiempo actual
+                            // Si p.time == now, x = receptorX
+                            // x disminuye conforme pasa el tiempo
+                            let x = receptorX - ((now - p.time) / 1000) * ZOOM_X;
+                            let px = receptorX - ((now - prev.time) / 1000) * ZOOM_X;
+
+                            // Solo dibujar si está visible Y si los puntos están cerca en el tiempo (continuidad)
+                            // Si pasaron más de 100ms entre puntos, asumimos corte de voz
+                            if (x < canvas.width && px > -50 && (p.time - prev.time) < 100) {
+                                ctx.beginPath();
+                                ctx.strokeStyle = `rgba(255, 255, 255, 0.6)`; // Color fantasma
+                                ctx.lineWidth = p.vol || 3;
+                                ctx.moveTo(px, prev.y);
+                                ctx.lineTo(x, p.y);
+                                ctx.stroke();
+                            }
+                        }
+                    }
+                }
+                // -----------------------------------------------------------
             }
 
             // Trayectoria
@@ -1410,6 +1474,9 @@
             // Dibuja la trayectoria
             for (let i = 1; i < noteHistory.length; i++) {
                 let p = noteHistory[i], prev = noteHistory[i - 1];
+
+                // FIX: Si hay un salto de tiempo mayor a 0.1s (silencio), no unir los puntos
+                if ((p.t - prev.t) > 0.1) continue;
 
                 // Posición X en tiempo real (el historial ya está en tiempo real)
                 // Ambos prev.t y visualTime están en tiempo real, así que la diferencia es directa
@@ -1502,6 +1569,7 @@
                 Tone.Transport.pause();
                 document.getElementById('btn-play-pause').innerText = "▶";
             } else {
+                idleVisualHistory = []; // Limpiar historial visual al dar Play
                 // Al dar Play: Ocultar guía permanentemente para esta sesión de canción Y cerrar popup
                 hasPlayedCurrentSong = true;
                 if (popupVideo.classList.contains('visible')) {
