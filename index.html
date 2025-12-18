@@ -12,6 +12,7 @@
             --panel: #111;
             --active: #040;
             --error: #f44;
+            --yt: #FF0000;
         }
 
         body {
@@ -154,10 +155,48 @@
             gap: 20px;
             overflow-y: auto;
             overscroll-behavior: contain;
+            box-sizing: border-box;
+            /* Fix for height calculation */
+            touch-action: pan-y;
+            /* Fix for scrolling on touch devices */
         }
 
         #panel-controles.open {
             left: 0;
+        }
+
+        /* Custom Scrollbar for Panel */
+        #panel-controles::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        #panel-controles::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 4px;
+        }
+
+        #panel-controles::-webkit-scrollbar-thumb {
+            background: #444;
+            border-radius: 4px;
+            border: 1px solid #222;
+        }
+
+        #panel-controles::-webkit-scrollbar-thumb:hover {
+            background: var(--neon);
+        }
+
+        /* Light Mode Scrollbar adjustments */
+        body.light-mode #panel-controles::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.05);
+        }
+
+        body.light-mode #panel-controles::-webkit-scrollbar-thumb {
+            background: #ccc;
+            border: 1px solid #fff;
+        }
+
+        body.light-mode #panel-controles::-webkit-scrollbar-thumb:hover {
+            background: var(--neon);
         }
 
         .grupo {
@@ -248,10 +287,13 @@
         .mini-monitor {
             background: rgba(20, 20, 20, 0.8);
             border: 1px solid #333;
-            padding: 7px 9px;
+            padding: 7px 12px;
             border-radius: 10px;
-            text-align: center;
-            min-width: 50px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-width: 70px;
         }
 
         .mini-monitor .label {
@@ -671,6 +713,102 @@
             }
         }
     </style>
+    <style>
+        /* LIGHT MODE */
+        body.light-mode {
+            background-color: #f4f4f9;
+            color: #111;
+            --bg: #f4f4f9;
+            --panel: #ffffff;
+            --glass: rgba(255, 255, 255, 0.9);
+        }
+
+        body.light-mode .card,
+        body.light-mode #panel-controles,
+        body.light-mode #spectrometer-popup,
+        body.light-mode #video-popup {
+            background: #ffffff;
+            border-color: #ccc;
+            color: #333;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        body.light-mode #splash-screen,
+        body.light-mode #registration-screen,
+        body.light-mode #modal-score {
+            background: #f4f4f9;
+            color: #111;
+        }
+
+        /* Mantener elementos específicos oscuros en Light Mode */
+        body.light-mode #barra-acciones,
+        body.light-mode .mini-monitor,
+        body.light-mode #menu-toggle {
+            background: rgba(20, 20, 20, 0.9);
+            border-color: #444;
+            color: var(--neon);
+        }
+
+        body.light-mode h1 {
+            text-shadow: none;
+            color: var(--neon);
+        }
+
+        body.light-mode .accordion-category {
+            background: #e9e9e9;
+            color: #333;
+            border-bottom: 1px solid #d0d0d0;
+        }
+
+        body.light-mode .accordion-category:hover {
+            background: #ddd;
+        }
+
+        body.light-mode .accordion-content {
+            background: #f4f4f4;
+        }
+
+        body.light-mode .song-item {
+            color: #555;
+        }
+
+        body.light-mode .song-item:hover {
+            color: #000;
+            background: rgba(0, 0, 0, 0.05);
+        }
+
+        body.light-mode .label {
+            color: #666;
+        }
+
+        body.light-mode #val-nota {
+            color: var(--neon);
+        }
+
+        body.light-mode .mini-monitor .valor {
+            color: white;
+        }
+
+        body.light-mode #btn-theme-toggle {
+            background: #eee;
+            color: #333;
+            border-color: #ccc;
+        }
+
+        body.light-mode #btn-mic {
+            background: #eee !important;
+            color: #333 !important;
+            border-color: #bbb !important;
+        }
+
+        body.light-mode .select-custom,
+        body.light-mode .input-custom {
+            background: #fff;
+            color: #333;
+            border-color: #ccc;
+        }
+    </style>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 
 <body>
@@ -705,14 +843,17 @@
     <button id="menu-toggle">☰</button>
 
     <div id="hud-top">
-        <button id="btn-spectrometer" class="btn-nav" title="Espectrómetro"
-            style="width:40px; height:40px; font-size:1em;">📊</button>
-        <div style="position: relative;">
-            <button id="btn-video" class="btn-nav" title="Video Guia"
-                style="width:40px; height:40px; font-size:1em;">🎥</button>
-            <div id="video-guide">
-                <div style="font-size: 16px;">⬆</div>
-                Ejemplo
+        <div style="display: flex; flex-direction: column; gap: 4px; align-items: center;">
+            <button id="btn-spectrometer" class="btn-nav" title="Espectrómetro"
+                style="width:40px; height:40px; font-size:1em;">📊</button>
+            <div style="position: relative;">
+                <button id="btn-video" class="btn-nav" title="Video Guia"
+                    style="width:40px; height:40px; font-size:1.2em; color: var(--yt); border-color: var(--yt);"><i
+                        class="fab fa-youtube"></i></button>
+                <div id="video-guide">
+                    <div style="font-size: 16px;">⬆</div>
+                    Ejemplo
+                </div>
             </div>
         </div>
         <div class="mini-monitor">
@@ -723,9 +864,13 @@
             <div class="label">NOTA</div>
             <div id="val-nota" class="valor">--</div>
         </div>
-        <div class="mini-monitor">
-            <div class="label">TIME</div>
-            <div id="tiempo-display" class="valor">0:00</div>
+        <div style="display: flex; flex-direction: column; gap: 4px;">
+            <div class="mini-monitor">
+                <div class="label">TIME</div>
+                <div id="tiempo-display" class="valor">0:00</div>
+            </div>
+            <button id="btn-camera" class="btn-nav" title="Activar Cámara"
+                style="width:100%; height:35px; font-size:1em;"><i class="fas fa-camera"></i></button>
         </div>
     </div>
 
@@ -808,20 +953,20 @@
             </div>
         </div>
         <div class="grupo">
-            <div class="label">Velocidad (Tempo)</div>
-            <select id="select-speed" class="select-custom">
-                <option value="1">100% (Normal)</option>
-                <option value="0.75">75% (Lento)</option>
-                <option value="0.5">50% (Muy Lento)</option>
-            </select>
-        </div>
-        <div class="grupo">
             <div class="label">Tono</div>
             <select id="select-tono" class="select-custom">
                 <option value="0">Hombre 1</option>
                 <option value="4">Hombre 2</option>
                 <option value="9">Mujer 1</option>
                 <option value="12">Mujer 2</option>
+            </select>
+        </div>
+        <div class="grupo">
+            <div class="label">Velocidad (Tempo)</div>
+            <select id="select-speed" class="select-custom">
+                <option value="1">100% (Normal)</option>
+                <option value="0.75">75% (Lento)</option>
+                <option value="0.5">50% (Muy Lento)</option>
             </select>
         </div>
         <div class="grupo" style="margin-top: 30px; position: relative;">
@@ -847,6 +992,9 @@
     <div id="contenedor-progreso">
         <div id="barra-progreso"></div>
     </div>
+    <button id="btn-theme-toggle" class="btn-nav" title="Cambiar Tema"
+        style="position: fixed; bottom: 20px; right: 20px; width: 50px; height: 50px; z-index: 2000; border-radius: 50%;">☀️</button>
+
     <canvas id="canvasMidi"></canvas>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
@@ -866,6 +1014,22 @@
         document.getElementById('btn-whatsapp').onclick = () => {
             window.open(WHATSAPP_LINK, '_blank');
         };
+
+        // --- THEME TOGGLE ---
+        const btnTheme = document.getElementById('btn-theme-toggle');
+        const updateThemeBtn = () => btnTheme.innerHTML = document.body.classList.contains('light-mode') ? '🌙' : '☀️';
+
+        // Cargar preferencia
+        if (localStorage.getItem('practicantor_theme') === 'light') {
+            document.body.classList.add('light-mode');
+        }
+        updateThemeBtn();
+
+        btnTheme.onclick = () => {
+            document.body.classList.toggle('light-mode');
+            localStorage.setItem('practicantor_theme', document.body.classList.contains('light-mode') ? 'light' : 'dark');
+            updateThemeBtn();
+        };
         let TRANSPOSE = 0, hitFrames = 0, activeFrames = 0, noteHistory = [], beatGrid = [], idleVisualHistory = [];
         let offsetManual = 0, isDragging = false, startDragX = 0, startOffset = 0;
         let audioCtx, analyser, micData, midiData = null, durationMIDI = 0;
@@ -876,6 +1040,52 @@
 
         const canvas = document.getElementById('canvasMidi'), ctx = canvas.getContext('2d');
         const scoreDisp = document.getElementById('score-display'), progBar = document.getElementById('barra-progreso');
+
+        // --- CÁMARA LOGIC ---
+        let cameraStream = null;
+        let useCameraBackground = false;
+        const videoElement = document.createElement('video');
+        videoElement.setAttribute('autoplay', '');
+        videoElement.setAttribute('muted', '');
+        videoElement.setAttribute('playsinline', '');
+        videoElement.style.display = 'none';
+        document.body.appendChild(videoElement);
+
+        async function toggleCamera() {
+            const btn = document.getElementById('btn-camera');
+            if (!useCameraBackground) {
+                try {
+                    cameraStream = await navigator.mediaDevices.getUserMedia({
+                        video: {
+                            width: { ideal: 1280 },
+                            height: { ideal: 720 },
+                            facingMode: "user"
+                        }
+                    });
+                    videoElement.srcObject = cameraStream;
+                    // Wait for video to be ready
+                    await new Promise(resolve => videoElement.onloadedmetadata = resolve);
+                    videoElement.play();
+                    useCameraBackground = true;
+                    btn.classList.add('rec-active');
+                    btn.innerHTML = '<i class="fas fa-video-slash"></i>';
+                    btn.title = "Desactivar Cámara";
+                } catch (err) {
+                    console.error("Error accessing camera:", err);
+                    alert("No se pudo acceder a la cámara. Asegúrate de dar permisos.");
+                }
+            } else {
+                if (cameraStream) {
+                    cameraStream.getTracks().forEach(track => track.stop());
+                }
+                videoElement.srcObject = null;
+                useCameraBackground = false;
+                btn.classList.remove('rec-active');
+                btn.innerHTML = '<i class="fas fa-camera"></i>';
+                btn.title = "Activar Cámara";
+            }
+        }
+        document.getElementById('btn-camera').onclick = toggleCamera;
 
         // Función para ajustar tamaño del canvas
         function resizeCanvas() {
@@ -1255,10 +1465,50 @@
         // --- RENDER ---
         function render() {
             canvas.width = window.innerWidth; canvas.height = window.innerHeight;
-            ctx.fillStyle = '#050505'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            const isLight = document.body.classList.contains('light-mode');
+            const bgC = isLight ? '#f4f4f9' : '#050505';
+            const gridLanesDark = useCameraBackground ? (isLight ? 'rgba(200,200,200,0.2)' : 'rgba(0,0,0,0.3)') : (isLight ? '#e5e5e5' : '#080808');
+            const gridLanesLight = useCameraBackground ? (isLight ? 'rgba(255,255,255,0.1)' : 'rgba(15,15,15,0.2)') : (isLight ? '#ffffff' : '#111');
+            const gridLines = isLight ? 'rgba(0,0,0,0.1)' : 'rgba(255, 255, 255, 0.3)';
+            const gridLinesWeak = isLight ? 'rgba(0,0,0,0.05)' : 'rgba(255, 255, 255, 0.08)';
+            const textC = isLight ? 'rgba(0,0,0,0.6)' : 'rgba(255, 255, 255, 0.5)';
+            const dotColor = isLight ? '#bf00ff' : '#fff';
+
+            if (useCameraBackground && videoElement.readyState >= 2) {
+                // Dibujar video manteniendo proporción (Cover)
+                const vRatio = videoElement.videoWidth / videoElement.videoHeight;
+                const cRatio = canvas.width / canvas.height;
+                let drawW, drawH, drawX, drawY;
+
+                if (cRatio > vRatio) {
+                    drawW = canvas.width;
+                    drawH = canvas.width / vRatio;
+                    drawX = 0;
+                    drawY = (canvas.height - drawH) / 2;
+                } else {
+                    drawW = canvas.height * vRatio;
+                    drawH = canvas.height;
+                    drawX = (canvas.width - drawW) / 2;
+                    drawY = 0;
+                }
+
+                ctx.save();
+                // Efecto espejo para el usuario
+                ctx.translate(canvas.width, 0);
+                ctx.scale(-1, 1);
+                ctx.drawImage(videoElement, canvas.width - drawX - drawW, drawY, drawW, drawH);
+                ctx.restore();
+
+                // Capa de contraste para ver las notas
+                ctx.fillStyle = isLight ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.3)';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+            } else {
+                ctx.fillStyle = bgC;
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+            }
 
             if (Tone.Transport.state === "started") offsetManual = Tone.Transport.seconds;
-
 
             // Busca esto y déjalo como estaba originalmente (sin dividir por speed)
             const visualTime = offsetManual - LATENCIA_VISUAL;
@@ -1267,7 +1517,7 @@
             // Grid
             for (let i = 0; i <= (NOTA_MAX - NOTA_MIN); i++) {
                 let midi = i + NOTA_MIN, y = canvas.height - (i * hNota) - hNota;
-                ctx.fillStyle = [1, 3, 6, 8, 10].includes(midi % 12) ? '#080808' : '#111';
+                ctx.fillStyle = [1, 3, 6, 8, 10].includes(midi % 12) ? gridLanesDark : gridLanesLight;
                 ctx.fillRect(ANCHO_TECLADO, y, canvas.width, hNota);
             }
 
@@ -1285,15 +1535,15 @@
 
                     if (x > ANCHO_TECLADO && x < canvas.width) {
                         if (g.type === 'measure') {
-                            ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+                            ctx.strokeStyle = gridLines;
                             ctx.lineWidth = 1;
                             ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke();
 
                             // Número de compás
-                            ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+                            ctx.fillStyle = textC;
                             ctx.fillText(g.num, x + 5, canvas.height - 10);
                         } else {
-                            ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
+                            ctx.strokeStyle = gridLinesWeak;
                             ctx.lineWidth = 1;
                             ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke();
                         }
@@ -1304,7 +1554,7 @@
 
             // Línea de referencia del usuario (punteada vertical)
             ctx.save();
-            ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+            ctx.strokeStyle = gridLines;
             ctx.lineWidth = 2;
             ctx.setLineDash([8, 8]);
             ctx.beginPath();
@@ -1343,11 +1593,11 @@
                             opacity = Math.max(0, Math.min(1, visibleWidth / visualDuration));
                         }
 
-                        // Aplica el color con opacidad
+                        // Aplica el color (sólido para que no se transparente la cámara)
                         if (isActive) {
                             ctx.fillStyle = `rgba(255, 255, 0, ${opacity})`;
                         } else {
-                            ctx.fillStyle = `rgba(0, 255, 0, ${0.25 * opacity})`;
+                            ctx.fillStyle = `rgba(0, 255, 0, ${0.9 * opacity})`;
                         }
                         ctx.fillRect(x, y + 1, visualDuration, hNota - 2);
                     }
@@ -1368,6 +1618,27 @@
                     freq = result;
                 }
 
+                // VU METER UPDATE
+                const vuBar = document.getElementById('vu-bar');
+                if (vuBar) {
+                    // Calculamos el porcentaje de llenado (RMS por factor de ganancia visual)
+                    let vuPercent = Math.min(100, rms * 400);
+                    vuBar.style.width = vuPercent + '%';
+
+                    // Lógica de colores solicitada:
+                    // Bajo (< 20%): Amarillo
+                    // Ideal (20% - 80%): Verde
+                    // Alto/Saturado (> 80%): Rojo
+
+                    if (vuPercent < 20) {
+                        vuBar.style.backgroundColor = '#ff0'; // Amarillo (muy bajito)
+                    } else if (vuPercent > 90) {
+                        vuBar.style.backgroundColor = '#f00'; // Rojo (saturando)
+                    } else {
+                        vuBar.style.backgroundColor = '#0f0'; // Verde (nivel ideal)
+                    }
+                }
+
                 currentDetectedFreq = freq; // Guardar para el espectrómetro
 
                 if (freq > 50 && freq < 1200) {
@@ -1378,7 +1649,7 @@
                     document.getElementById('val-nota').innerText = NOMBRES[Math.round(pitch) % 12];
 
                     // Dibuja el círculo de la voz SIEMPRE (esté en play o no)
-                    ctx.fillStyle = '#fff';
+                    ctx.fillStyle = dotColor;
                     ctx.beginPath(); ctx.arc(receptorX, yVoz, 6, 0, Math.PI * 2); ctx.fill();
 
                     // Solo guarda el historial si el transporte está encendido
@@ -1449,7 +1720,7 @@
                             // Si pasaron más de 100ms entre puntos, asumimos corte de voz
                             if (x < canvas.width && px > -50 && (p.time - prev.time) < 100) {
                                 ctx.beginPath();
-                                ctx.strokeStyle = `rgba(255, 255, 255, 0.6)`; // Color fantasma
+                                ctx.strokeStyle = isLight ? `rgba(0, 0, 0, 0.5)` : `rgba(255, 255, 255, 0.6)`; // Color fantasma
                                 ctx.lineWidth = p.vol || 3;
                                 ctx.moveTo(px, prev.y);
                                 ctx.lineTo(x, p.y);
@@ -1523,7 +1794,14 @@
             const scaledDuration = durationMIDI / speedFactor;
             if (activeFrames > 0) scoreDisp.innerText = (hitFrames / activeFrames * 10).toFixed(1);
             progBar.style.width = (offsetManual / scaledDuration * 100) + "%";
-            document.getElementById('tiempo-display').innerText = Math.floor(offsetManual / 60) + ":" + String(Math.floor(offsetManual % 60)).padStart(2, '0');
+
+            // Time Display: Current / Total
+            const curM = Math.floor(offsetManual / 60);
+            const curS = String(Math.floor(offsetManual % 60)).padStart(2, '0');
+            const totM = Math.floor(scaledDuration / 60);
+            const totS = String(Math.floor(scaledDuration % 60)).padStart(2, '0');
+            document.getElementById('tiempo-display').innerText = `${curM}:${curS} / ${totM}:${totS}`;
+            document.getElementById('tiempo-display').style.width = "auto"; // Ensure it fits
 
             if (Tone.Transport.state === "started" && offsetManual >= scaledDuration) {
                 document.getElementById('final-score-val').innerText = scoreDisp.innerText;
@@ -1578,6 +1856,9 @@
                 Tone.Transport.pause();
                 document.getElementById('btn-play-pause').innerText = "▶";
             } else {
+                // Cerrar menú si está abierto
+                document.getElementById('panel-controles').classList.remove('open');
+
                 idleVisualHistory = []; // Limpiar historial visual al dar Play
                 // Al dar Play: Ocultar guía permanentemente para esta sesión de canción Y cerrar popup
                 hasPlayedCurrentSong = true;
@@ -1687,15 +1968,43 @@
             document.getElementById('vol-slider').value = e.target.value; // Sincroniza con el del panel
         };
 
-        // Activa el arrastre del lienzo
+        // Activa el arrastre del lienzo O toca el piano
         canvas.onpointerdown = (e) => {
+            // Si tocamos en el área del teclado (lado izquierdo)
+            if (e.clientX <= ANCHO_TECLADO) {
+                // Calcular qué nota se tocó
+                const hNota = canvas.height / (NOTA_MAX - NOTA_MIN);
+                // (canvas.height - e.clientY) / hNota  da el índice desde abajo (base 0)
+                const noteIndex = Math.floor((canvas.height - e.clientY) / hNota);
+                const midiNote = noteIndex + NOTA_MIN;
+
+                if (currentSynth && midiNote >= NOTA_MIN && midiNote <= NOTA_MAX) {
+                    currentSynth.triggerAttackRelease(Tone.Frequency(midiNote, "midi").toNote(), "8n");
+
+                    // Feedback visual instantáneo
+                    const ctx = canvas.getContext('2d');
+                    const y = canvas.height - ((midiNote - NOTA_MIN) * hNota) - hNota;
+                    ctx.fillStyle = "rgba(0, 255, 0, 0.5)";
+                    ctx.fillRect(0, y, ANCHO_TECLADO, hNota);
+                }
+                return; // No iniciamos arrastre si tocamos el teclado
+            }
+
             if (Tone.Transport.state !== "started") {
                 isDragging = true;
                 startDragX = e.clientX;
                 startOffset = offsetManual;
             }
         };
+
         window.onpointermove = (e) => {
+            // Cambio de cursor si estamos sobre las teclas
+            if (e.clientX <= ANCHO_TECLADO) {
+                canvas.style.cursor = 'pointer';
+            } else {
+                canvas.style.cursor = isDragging ? 'grabbing' : 'default';
+            }
+
             if (isDragging) {
                 let diff = (e.clientX - startDragX) / ZOOM_X;
                 offsetManual = Math.max(0, Math.min(durationMIDI, startOffset - diff));
